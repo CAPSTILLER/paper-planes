@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { bbox, reflect, area } from './fold.js'
 import { Custom } from './custom.jsx'
+import { FACES } from './art2.jsx'
 
 const FRONT = '#ffffff', BACK = '#bfdcff'
 const poly = (pts) => pts.map((p) => p.map((v) => v.toFixed(2)).join(',')).join(' ')
@@ -17,6 +18,7 @@ function Layer({ L, hl, w }) {
 }
 
 export function Planform({ plane, size = 100 }) {
+  if (plane.icon) return <span className="icon-emoji" style={{ fontSize: size * 0.7, width: size, height: size }} aria-hidden="true">{plane.icon}</span>
   const pf = plane.planform
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
@@ -40,8 +42,14 @@ export default function Diagram({ step, plane, autoplay }) {
   useEffect(() => { setT(0); if (autoplay && op.kind === 'fold') { const id = setTimeout(play, 500); return () => clearTimeout(id) } }, [step])
   useEffect(() => () => cancelAnimationFrame(raf.current), [])
 
-  if (op.kind === 'done') return <div className="diagram done"><Planform plane={plane} size={240} /></div>
-  if (op.kind === 'custom') return <div className="diagram"><Custom name={op.svg} plane={plane} /></div>
+  if (op.kind === 'done') {
+    if (step.afterCustom && plane.craft && plane.craft !== 'planes') return <div className="diagram done"><span className="icon-emoji" style={{ fontSize: 150 }}>{plane.icon}</span><span className="guide-tag">Finished! (picture is a symbol)</span></div>
+    if (!plane.craft || plane.craft === 'planes') return <div className="diagram done"><Planform plane={plane} size={240} /></div>
+    const ls = step.before.layers, bb = bbox(ls), p = 8, w0 = Math.max(bb[2] - bb[0], bb[3] - bb[1]) / 260
+    return (<div className="diagram done final"><svg viewBox={[bb[0] - p, bb[1] - p, bb[2] - bb[0] + 2 * p, bb[3] - bb[1] + 2 * p].join(' ')} role="img" aria-label="Finished model">
+      {ls.map((L, i) => <Layer key={i} L={L} w={w0 * 1.3} />)}{plane.face && FACES[plane.face](bb)}</svg><span className="done-emoji">{plane.icon}</span></div>)
+  }
+  if (op.kind === 'custom') return <div className="diagram"><Custom name={op.svg} plane={plane} />{plane.craft && plane.craft !== 'planes' && <span className="guide-tag">Guide picture</span>}</div>
 
   const all = [...step.before.layers, ...step.after.layers]
   const [x0, y0, x1, y1] = bbox(all)
@@ -51,6 +59,14 @@ export default function Diagram({ step, plane, autoplay }) {
 
   if (op.kind === 'sheet') {
     return <div className="diagram"><svg viewBox={vb.join(' ')} role="img" aria-label="New sheet">{step.after.layers.map((L, i) => <Layer key={i} L={L} w={sw} />)}<text x={vb[0] + vb[2] / 2} y={vb[1] + vb[3] / 2} textAnchor="middle" fontSize={vb[3] / 9} fill="#9b30d9" fontWeight="800">NEW</text></svg></div>
+  }
+  if (op.kind === 'rotate') {
+    const c = op.c, ang = op.deg * t
+    return (<div className="diagram" onClick={play}><svg viewBox={vb.join(' ')} role="img" aria-label="Turn the paper">
+      <g transform={`rotate(${ang} ${c[0]} ${c[1]})`}>{step.before.layers.map((L, i) => <Layer key={i} L={L} w={sw} />)}</g>
+      {t === 0 && <path d={`M${c[0] - 30},${c[1] - 40} A50,50 0 0 1 ${c[0] + 40},${c[1] - 30}`} fill="none" stroke="#d6336c" strokeWidth={sw * 3} markerEnd="url(#rah)" />}
+      <defs><marker id="rah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d6336c" /></marker></defs>
+    </svg><PlayBtn onClick={play} /></div>)
   }
   if (op.kind === 'flip') {
     const cx = op.axis

@@ -28,9 +28,9 @@ const wings = (a, b, sx = 84, sy = 80, t1, t2) => [
 ]
 
 export const SECTIONS = [
-  { id: 'beginner', name: 'Beginner', emoji: '🟢', color: '#2fb344', blurb: '5 easy planes. Start here!' },
-  { id: 'pro', name: 'Pro', emoji: '🔵', color: '#2563eb', blurb: '4 trickier planes with cool tricks.' },
-  { id: 'master', name: 'Master', emoji: '🟣', color: '#9b30d9', blurb: '1 big challenge with 2 sheets.' },
+  { craft: 'planes', id: 'beginner', name: 'Beginner', emoji: '🟢', color: '#2fb344', blurb: '5 easy planes. Start here!' },
+  { craft: 'planes', id: 'pro', name: 'Pro', emoji: '🔵', color: '#2563eb', blurb: '4 trickier planes with cool tricks.' },
+  { craft: 'planes', id: 'master', name: 'Master', emoji: '🟣', color: '#9b30d9', blurb: '1 big challenge with 2 sheets.' },
 ]
 
 export const PLANES = [

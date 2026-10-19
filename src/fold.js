@@ -51,7 +51,8 @@ function lineInPoly(pts, a, b) {
 }
 export const sheet = (w, h) => ({ layers: [{ pts: [[0, 0], [w, 0], [w, h], [0, h]], face: 0, tags: [], lines: [] }] })
 
-const affects = (L, op) => (!op.only || L.tags.includes(op.only)) && (!op.skip || !L.tags.includes(op.skip))
+const arr = (x) => (Array.isArray(x) ? x : [x])
+const affects = (L, op) => (!op.only || arr(op.only).some((t) => L.tags.includes(t))) && (!op.skip || !arr(op.skip).some((t) => L.tags.includes(t)))
 
 // Split state for a fold: returns {stay, moving} (moving not yet reflected) + result
 export function doFold(state, op) {
@@ -88,6 +89,11 @@ export function doFlip(state, axis) {
   const m = (p) => [2 * axis - p[0], p[1]]
   return { layers: state.layers.map((L) => ({ ...L, pts: L.pts.map(m).reverse(), lines: L.lines.map((ln) => ln.map(m)), face: 1 - L.face })).reverse() }
 }
+export function doRotate(state, deg, c) {
+  const r = (deg * Math.PI) / 180, co = Math.cos(r), si = Math.sin(r)
+  const f = (p) => [c[0] + (p[0] - c[0]) * co - (p[1] - c[1]) * si, c[1] + (p[0] - c[0]) * si + (p[1] - c[1]) * co]
+  return { layers: state.layers.map((L) => ({ ...L, pts: L.pts.map(f), lines: L.lines.map((ln) => ln.map(f)) })) }
+}
 export function bbox(layers) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9
   for (const L of layers) for (const [x, y] of L.pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y) }
@@ -95,7 +101,8 @@ export function bbox(layers) {
 }
 // Build all step states for a plane
 export function buildSteps(plane) {
-  let state = sheet(...(plane.paper || [85, 110]))
+  let state = plane.start ? { layers: [{ pts: plane.start, face: 0, tags: [], lines: [] }] } : sheet(...(plane.paper || [85, 110]))
+  let lastKind = null
   return plane.steps.map((st) => {
     const op = st.op || { kind: 'custom' }
     const before = state
@@ -106,10 +113,16 @@ export function buildSteps(plane) {
       state = f.result
     } else if (op.kind === 'flip') {
       state = doFlip(state, op.axis)
+    } else if (op.kind === 'rotate') {
+      state = doRotate(state, op.deg, op.c)
+    } else if (op.kind === 'guide' && op.set) {
+      state = { layers: op.set.map((pts, i) => ({ pts, face: (op.faces || [])[i] || 0, tags: [], lines: (op.setLines || [])[i] || [] })) }
     } else if (op.kind === 'sheet') {
       state = sheet(...op.size); info.before = state
     }
     info.after = state
+    info.afterCustom = lastKind === 'custom'
+    lastKind = op.kind
     return { ...st, op, ...info }
   })
 }

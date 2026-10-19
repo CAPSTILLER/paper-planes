@@ -1,5 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { PLANES, SECTIONS } from './planes.js'
+import { PLANES as P0, SECTIONS as S0 } from './planes.js'
+import { ORIGAMI } from './origami.js'
+import { DOLLAR } from './dollar.js'
+const PLANES = [...P0.map((p) => ({ craft: 'planes', ...p })), ...ORIGAMI, ...DOLLAR]
+const mk = (craft, pre, color) => [
+  { craft, id: pre + 'beginner', name: 'Beginner', emoji: '🟢', color: '#2fb344', blurb: '5 easy models. Start here!' },
+  { craft, id: pre + 'pro', name: 'Pro', emoji: '🔵', color: '#2563eb', blurb: '4 trickier models.' },
+  { craft, id: pre + 'master', name: 'Master', emoji: '🟣', color: '#9b30d9', blurb: '1 big challenge.' },
+]
+const SECTIONS = [...S0, ...mk('origami', 'o-'), ...mk('dollar', 'd-')]
+const CRAFTS = [
+  { id: 'planes', name: 'Paper Planes', emoji: '✈️', color: '#4dabf7', grad: 'linear-gradient(160deg,#4dabf7,#9775fa)', blurb: 'Fold 10 planes and learn the science of flight!', paper: 'Printer paper (US Letter or A4)' },
+  { id: 'origami', name: 'Origami', emoji: '🦢', color: '#f06595', grad: 'linear-gradient(160deg,#f783ac,#ff922b)', blurb: 'Fold animals, flowers and boxes from a square.', paper: 'Square paper (origami paper, or make a square from printer paper)' },
+  { id: 'dollar', name: 'Dollar Bill Origami', emoji: '💵', color: '#2f9e44', grad: 'linear-gradient(160deg,#40c057,#20c997)', blurb: 'Turn a $1 bill into rings, shirts, hearts and more.', paper: 'A $1 bill or a printable practice bill' },
+]
+const craftOf = (id) => CRAFTS.find((c) => c.id === id) || CRAFTS[0]
 import { buildSteps } from './fold.js'
 import Diagram, { Planform } from './Diagram.jsx'
 
@@ -19,22 +34,25 @@ const go = (path) => { location.hash = path }
 const stepsCache = {}
 const stepsOf = (pl) => (stepsCache[pl.id] ||= buildSteps(pl))
 const Stars = ({ n }) => <span className="stars" aria-label={`${n} of 5 difficulty`}>{'★'.repeat(n)}{'☆'.repeat(5 - n)}</span>
-const Badges = ({ pl }) => (<div className="badges"><span className="badge">⏱ {pl.time}</span><span className="badge">📄 {pl.sheets} sheet{pl.sheets > 1 ? 's' : ''}</span><span className="badge"><Stars n={pl.stars} /></span></div>)
+const unit = (pl) => (pl.craft === 'dollar' ? 'bill' : pl.craft === 'origami' ? 'square' : 'sheet')
+const Badges = ({ pl }) => (<div className="badges"><span className="badge">⏱ {pl.time}</span><span className="badge">{pl.craft === 'dollar' ? '💵' : '📄'} {pl.sheets} {unit(pl)}{pl.sheets > 1 ? 's' : ''}</span><span className="badge"><Stars n={pl.stars} /></span></div>)
 
 export default function App() {
   const r = useRoute()
   const [prog, setProg] = useProgress()
   let page
-  if (r[0] === 's') page = <Section id={r[1]} prog={prog} />
+  if (r[0] === 'c') page = <CraftHome craft={craftOf(r[1])} prog={prog} />
+  else if (r[0] === 'practice') page = <Practice />
+  else if (r[0] === 's') page = <Section id={r[1]} prog={prog} />
   else if (r[0] === 'p') {
     const pl = PLANES.find((x) => x.id === r[1])
-    if (!pl) page = <Home prog={prog} />
+    if (!pl) page = <Chooser prog={prog} />
     else if (r[2] === 'step') page = <Steps pl={pl} n={+r[3] || 0} prog={prog} setProg={setProg} />
     else if (r[2] === 'science') page = <Science pl={pl} />
     else if (r[2] === 'print') page = <Print pl={pl} />
     else page = <Plane pl={pl} prog={prog} />
-  } else if (r[0] === 'all') page = <AllDiagrams />
-  else page = <Home prog={prog} />
+  } else if (r[0] === 'all') page = <AllDiagrams only={r[1]} />
+  else page = <Chooser prog={prog} />
   return <div className="app">{page}</div>
 }
 
@@ -45,19 +63,35 @@ function Top({ back, title, color }) {
   </header>)
 }
 
-function Home({ prog }) {
-  const built = PLANES.filter((p) => prog.built[p.id]).length
+function Chooser({ prog }) {
   return (<>
-    <header className="hero">
-      <div className="hero-plane">✈️</div>
-      <h1>Paper Plane Academy</h1>
-      <p>Fold 10 amazing planes and learn the science of flight!</p>
+    <header className="hero"><div className="hero-plane">🎨</div><h1>Paper Art Academy</h1><p>Pick a craft to start folding!</p></header>
+    <main className="wrap">
+      {CRAFTS.map((c) => {
+        const list = PLANES.filter((p) => p.craft === c.id), n = list.filter((p) => prog.built[p.id]).length
+        return (<button key={c.id} className="craft-card" style={{ '--c': c.color, background: c.grad }} onClick={() => go(`/c/${c.id}`)}>
+          <span className="cc-emoji">{c.emoji}</span><span className="cc-body"><b>{c.name}</b><small>{c.blurb}</small><small className="cc-prog">🏅 {n}/10 built</small></span></button>)
+      })}
+      <div className="safety">⚠️ <b>Safety first:</b> never throw planes at people, faces or animals. Ask a grown-up before using scissors.</div>
+    </main>
+  </>)
+}
+
+function CraftHome({ craft, prog }) {
+  const all = PLANES.filter((p) => p.craft === craft.id)
+  const built = all.filter((p) => prog.built[p.id]).length
+  return (<>
+    <header className="hero" style={{ background: craft.grad }}>
+      <button className="back hero-back" onClick={() => go('/')} aria-label="Back to crafts">←</button>
+      <div className="hero-plane">{craft.emoji}</div>
+      <h1>{craft.name}</h1>
+      <p>{craft.blurb}</p>
       <div className="meter"><div style={{ width: `${built * 10}%` }} /></div>
-      <p className="meter-txt">🏅 {built} of 10 planes built</p>
+      <p className="meter-txt">🏅 {built} of 10 built</p>
     </header>
     <main className="wrap">
-      {SECTIONS.map((s) => {
-        const list = PLANES.filter((p) => p.section === s.id)
+      {SECTIONS.filter((s) => s.craft === craft.id).map((s) => {
+        const list = all.filter((p) => p.section === s.id)
         const n = list.filter((p) => prog.built[p.id]).length
         return (<button key={s.id} className="section-card" style={{ '--c': s.color }} onClick={() => go(`/s/${s.id}`)}>
           <span className="sc-emoji">{s.emoji}</span>
@@ -65,8 +99,10 @@ function Home({ prog }) {
           <span className="sc-planes">{list.slice(0, 3).map((p) => <Planform key={p.id} plane={p} size={34} />)}</span>
         </button>)
       })}
-      <div className="safety">⚠️ <b>Safety first:</b> never throw planes at people, faces or animals. Fly in open spaces, and pick up your planes when you're done.</div>
-      <div className="paper-note">📄 Use plain printer paper: US Letter (8½ × 11 in) or A4 both work.</div>
+      {craft.id === 'planes' && <div className="safety">⚠️ <b>Safety first:</b> never throw planes at people, faces or animals. Fly in open spaces, and pick up your planes when you're done.</div>}
+      {craft.id === 'origami' && <div className="safety">✂️ No square paper? Every model starts with how to make a square from printer paper. Ask a grown-up to help with scissors.</div>}
+      {craft.id === 'dollar' && <><div className="safety">💵 Folding real money is fine! You can unfold it and spend it. Just don't tear, cut or write on bills.</div><button className="big-btn" style={{ marginTop: 14 }} onClick={() => go('/practice')}>🖨 Print practice bills</button></>}
+      <div className="paper-note">📄 Paper: {craft.paper}</div>
     </main>
   </>)
 }
@@ -75,7 +111,7 @@ function Section({ id, prog }) {
   const s = SECTIONS.find((x) => x.id === id) || SECTIONS[0]
   const list = PLANES.filter((p) => p.section === s.id)
   return (<>
-    <Top back="/" title={`${s.emoji} ${s.name}`} color={s.color} />
+    <Top back={`/c/${s.craft}`} title={`${craftOf(s.craft).emoji} ${s.name}`} color={s.color} />
     <main className="wrap">
       <p className="lead">{s.blurb}</p>
       {list.map((p, i) => (
@@ -97,8 +133,8 @@ function Plane({ pl, prog }) {
     <main className="wrap">
       <div className="plane-hero" style={{ '--c': pl.color }}><Planform plane={pl} size={150} /><div><span className="pill" style={{ background: s.color }}>{s.name}</span><p className="good">Good at: <b>{pl.goodAt}</b></p><Badges pl={pl} />{prog.built[pl.id] && <p className="built big">🏅 You built this!</p>}</div></div>
       <button className="big-btn" onClick={() => go(`/p/${pl.id}/step/0`)}>📐 {done ? `Keep folding (${done}/${steps.length})` : `Start folding (${steps.length} steps)`}</button>
-      <button className="big-btn sci" onClick={() => go(`/p/${pl.id}/science`)}>🔬 The science</button>
-      <section className="card"><h2>🎯 Flying tips</h2><ul>{pl.tips.map((t) => <li key={t}>{t}</li>)}</ul></section>
+      <button className="big-btn sci" onClick={() => go(`/p/${pl.id}/science`)}>🔬 {pl.craft === 'planes' ? 'The science' : 'Science & Math'}</button>
+      <section className="card"><h2>🎯 {pl.craft === 'planes' ? 'Flying tips' : 'Folding tips'}</h2><ul>{pl.tips.map((t) => <li key={t}>{t}</li>)}</ul></section>
       <section className="card"><h2>🛠 Fix it!</h2>{pl.trouble.map(([a, b]) => <p key={a}><b>{a}?</b> {b}</p>)}</section>
       <button className="small-btn" onClick={() => go(`/p/${pl.id}/print`)}>🖨 Printable steps</button>
     </main>
@@ -139,6 +175,19 @@ function Steps({ pl, n, prog, setProg }) {
 
 function Science({ pl }) {
   const s = pl.science
+  if (pl.craft !== 'planes') return (<>
+    <Top back={`/p/${pl.id}`} title={`🔬 ${pl.name}`} color={pl.color} />
+    <main className="wrap">
+      <section className="card bigidea"><h2>💡 Big idea</h2><p>{s.bigIdea}</p></section>
+      <section className="card"><h2>📐 Shape math</h2><p>{s.math}</p></section>
+      <section className="card"><h2>🤔 Why the folds work</h2><p>{s.why}</p></section>
+      {s.history && <section className="card"><h2>🌏 History & culture</h2><p>{s.history}</p></section>}
+      {s.money && <section className="card"><h2>💵 How money is made</h2><p>{s.money}</p></section>}
+      <section className="card"><h2>📖 Science words</h2>{s.words.map(([w, d]) => <p key={w}><b>{w}:</b> {d}</p>)}</section>
+      <section className="card"><h2>🚀 Real-world folding</h2>{s.real.map(([w, d]) => <p key={w}><b>{w}:</b> {d}</p>)}</section>
+      <section className="card exp"><h2>🧪 Try this experiment</h2><p>{s.experiment}</p></section>
+    </main>
+  </>)
   return (<>
     <Top back={`/p/${pl.id}`} title={`🔬 ${pl.name}`} color={pl.color} />
     <main className="wrap">
@@ -172,12 +221,23 @@ function Print({ pl }) {
     <Top back={`/p/${pl.id}`} title={`🖨 ${pl.name}`} color={pl.color} />
     <main className="wrap print">
       <button className="big-btn noprint" onClick={() => print()}>🖨 Print</button>
-      <h2 className="onlyprint">{pl.name}: Paper Plane Academy</h2>
+      <h2 className="onlyprint">{pl.name}: Paper Art Academy</h2>
       <div className="print-grid">{steps.map((st, i) => (<div key={i} className="print-step"><Diagram step={st} plane={pl} /><p><b>{i + 1}.</b> {st.text}</p></div>))}</div>
     </main>
   </>)
 }
 
-function AllDiagrams() {
-  return (<main className="all">{PLANES.map((pl) => (<div key={pl.id}><h2>{pl.name}</h2><div className="all-grid">{stepsOf(pl).map((st, i) => (<div key={i} className="print-step"><Diagram step={st} plane={pl} /><p><b>{i + 1}.</b> {st.text}</p></div>))}</div></div>))}</main>)
+function AllDiagrams({ only }) {
+  return (<main className="all">{PLANES.filter((p) => !only || p.id === only || p.craft === only).map((pl) => (<div key={pl.id}><h2>{pl.name}</h2><div className="all-grid">{stepsOf(pl).map((st, i) => (<div key={i} className="print-step"><Diagram step={st} plane={pl} /><p><b>{i + 1}.</b> {st.text}</p></div>))}</div></div>))}</main>)
+}
+
+function Practice() {
+  return (<>
+    <Top back="/c/dollar" title="🖨 Practice bills" color="#2f9e44" />
+    <main className="wrap practice">
+      <p className="noprint">Print at <b>100% / Actual size</b> (not "fit to page"). Each rectangle is 6.14 × 2.61 inches, the size of a real bill. Cut them out and practice!</p>
+      <button className="big-btn noprint" onClick={() => print()}>🖨 Print</button>
+      <div className="bills">{[0, 1, 2].map((i) => <div key={i} className="pbill">Practice paper</div>)}</div>
+    </main>
+  </>)
 }

@@ -48,3 +48,12 @@ small{font-size:.9rem}
 @media print{.top,.noprint{display:none}.onlyprint{display:block}body,html{background:#fff}.print-grid{grid-template-columns:repeat(3,1fr)}}
 @media (min-width:700px){html,body{font-size:20px}.diagram svg{height:480px}}
 .all .all-grid{grid-template-columns:repeat(3,1fr)!important}.all .print-step .diagram svg{height:400px}
+.craft-card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;border-radius:26px;padding:20px;margin:0 0 18px;color:#fff;box-shadow:0 7px 0 #0003;min-height:120px}
+.craft-card:active{transform:translateY(4px)}.cc-emoji{font-size:3.2rem}.cc-body{display:flex;flex-direction:column;gap:4px}.cc-body b{font-size:1.5rem;text-shadow:0 2px 0 #0002}.cc-prog{font-weight:800}
+.hero{position:relative}.hero-back{position:absolute;left:12px;top:12px}
+.icon-emoji{display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.guide-tag{position:absolute;left:12px;top:10px;background:#fff3bf;border:2px solid #fcc419;border-radius:10px;padding:2px 8px;font-size:.75rem;font-weight:800}
+.diagram.final{position:relative}.diagram.final svg{height:min(44vh,360px)}.done-emoji{position:absolute;right:16px;top:10px;font-size:2.4rem}
+.pbill{width:6.14in;height:2.61in;border:2px dashed #2b8a3e;background:#ebfbee;display:flex;align-items:center;justify-content:center;font-weight:800;color:#2b8a3e;margin:0 auto .25in;font-size:18px}
+.bills{overflow-x:auto}
+@media print{.pbill{background:#fff}}

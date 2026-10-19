@@ -49,4 +49,5 @@ const art = {
     <circle cx="100" cy="98" r="7" fill={ARW} /><text x="112" y="102" fontSize="11" fontWeight="700" fill={K}>balance point</text>
     <text x="100" y="192" textAnchor="middle" fontSize="12" fontWeight="700" fill={K}>balance it on one finger here</text></svg>),
 }
-export function Custom({ name, plane }) { const f = art[name]; return f ? f(plane) : null }
+import { ART2 } from './art2.jsx'
+export function Custom({ name, plane }) { const f = art[name] || ART2[name]; return f ? f(plane) : null }
